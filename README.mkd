@@ -26,8 +26,8 @@ To create a profile, Go to Setup > Export Profile. Read the instructions and cli
 
 Once the profile has been created, you can copy it somewhere else or zip it up. The profile consists of files in these directories:
 
-`       /site/install/  
-`       /site/templates/
+- /site/install/  
+- /site/templates/
 
 If you intend to distribute your profile, you'll want to ZIP them up into an archive, or place them on GitHub. If using the profile to upgrade ProcessWire, then see the section following this one.
 
@@ -49,9 +49,8 @@ It should be noted that this upgrade does not cover user accounts or access cont
 - Download the latest copy of ProcessWire 2.1 at <http://processwire.com/download/> and install in a new location. If you are installing on the same server in a different directroy, then don't use the same database as you did in 2.0. Instead create a new database that you will be using for 2.1.
 
 - Before starting the 2.1 installer, copy these directories from your ProcessWire 2.0 installation to your ProcessWire 2.1 files (completely replacing the directories in the 2.1 files):
-
-`       /site/install/     =>   /site-default/install/
-`       /site/templates/   =>   /site-default/templates/
+    - /site/install/  ...  to ...  /site-default/install/  
+    - /site/templates/  ... to ...  /site-default/templates/
 
 - Now run the ProcessWire 2.1 installer by loading the URL to it in your browser. If all goes as it should, you'll see your 2.0 site now running 2.1. There are some likely issues that may occur, so read the following section about troubleshooting whether you think you need to or not.
 
