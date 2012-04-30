@@ -4,7 +4,7 @@
  * Export site profiles
  *
  * ProcessWire 2.x 
- * Copyright (C) 2011 by Ryan Cramer 
+ * Copyright (C) 2012 by Ryan Cramer 
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  * 
  * http://www.processwire.com
@@ -20,7 +20,7 @@ class ProcessExportProfile extends Process {
 		return array(
 			'title' => 'Export Site Profile', 
 			'summary' => 'Creates a site profile that can be used for a fresh install of ProcessWire.', 
-			'version' => 100, 
+			'version' => 101, 
 			'permanent' => false, 
 			);
 	}
@@ -79,6 +79,18 @@ class ProcessExportProfile extends Process {
 	protected $exportPath;
 
 	/**
+	 * Name of /site/ dir (not a path or URL)
+	 *
+	 */
+	protected $siteDir; 
+
+	/**
+	 * URL that profile DB dump is exported to
+	 *
+	 */
+	protected $exportUrl; 
+
+	/**
  	 * Is the current site running PW 2.0?
 	 *
 	 */
@@ -98,7 +110,11 @@ class ProcessExportProfile extends Process {
 		); 
 
 	public function __construct() {
-		$this->exportPath = $this->config->paths->root . 'site/install/';
+		$path = rtrim($this->config->paths->templates, '/');
+		$path = substr($path, 0, strrpos($path, '/'));
+		$this->siteDir = substr($path, strrpos($path, '/')+1); 
+		$this->exportPath = $path . '/install/';
+		$this->exportUrl = '/' . $this->siteDir . '/install/';
 		$this->isUpgrade = ProcessWire::versionMajor == 2 && ProcessWire::versionMinor == 0; 
 	}
 
@@ -121,17 +137,18 @@ class ProcessExportProfile extends Process {
 	protected function setup() {
 
 		$path = $this->exportPath;
+		$url = $this->exportUrl;
 
 		if(!is_dir($path)) {
 			if(!mkdir($path)) {
-				$this->error("Before continuing, please create this directory and ensure that it is writable: /site/install/"); 
+				$this->error("Before continuing, please create this directory and ensure that it is writable: $url"); 
 				return false;
 			}
 			if($this->config->chmodDir) chmod($path, octdec($this->config->chmodDir));	
 		}
 
 		if(!is_writable($path)) {
-			$this->error("Before continuing, please make this directory writable and remove any files already in it: /site/install/"); 
+			$this->error("Before continuing, please make this directory writable and remove any files already in it: $url"); 
 			return false;
 		}	
 
@@ -153,7 +170,7 @@ class ProcessExportProfile extends Process {
 
 		if($profileTime) {
 			$date = date('F j, Y', $profileTime); 
-			return 	"<p>An installation profile already exists in /site/install/ dated $date. Before continuing please remove it:</p>" . 
+			return 	"<p>An installation profile already exists in {$this->exportUrl} dated $date. Before continuing please remove it:</p>" . 
 				"<p><a href='./remove/'><strong>Remove existing install profile</strong></a></p>";
 		}
 
@@ -222,11 +239,11 @@ class ProcessExportProfile extends Process {
 		$out = '';
 
 		if(!$this->copyRecursive($this->config->paths->files, $this->exportPath . 'files/')) {
-			$this->error("Error copying /site/assets/files/ to /site/install/files/"); 
+			$this->error("Error copying {$this->config->urls->files} to {$this->exportUrl}files/"); 
 			return;
 		}
 
-		$this->message("Your site profile is now ready in /site/install/"); 
+		$this->message("Your site profile is now ready in {$this->exportUrl}"); 
 
 		$out .= "<h2>The site profile has been exported!</h2>";
 
@@ -247,7 +264,7 @@ class ProcessExportProfile extends Process {
 			"" . 
 			"<p>2. Before running the installer for the new version of ProcessWire you just downloaded, you will want to replace the site profile " . 
 			"that the new version comes with. To do that, replace these directories on the new installation with the same directories " . 
-			"(located under /site/) from your current (this) installation:</p>". 
+			"(located under /{$this->siteDir}/) from your current (this) installation:</p>". 
 			"<pre>" . 
 			"/site-default/install/\n" . 
 			"/site-default/templates/\n" . 
@@ -285,7 +302,7 @@ class ProcessExportProfile extends Process {
 		$this->message("Created $dumpFile"); 
 
 		$out =	"<h2>Your database profile has been exported.</h2>" . 
-			"<p>The next step will copy all of your site's files from /site/assets/files/ to /site/install/files/. " . 
+			"<p>The next step will copy all of your site's files from /{$this->siteDir}/assets/files/ to {$this->exportUrl}files/. " . 
 			"It will not make any changes to your current site.</p>" . 
 			"<p><a href='../copy/'><strong>Continue with next step</strong></a></p>";
 			
