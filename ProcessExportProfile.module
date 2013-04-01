@@ -124,7 +124,7 @@ class ProcessExportProfile extends Process {
 		$this->fuel->set('processHeadline', $info['title']); 
 
 		// prevent this particular page from being copied over
-		$this->tableWhereSQL['pages'] .= ' OR id=' . $this->page->id; 
+		$this->tableWhereSQL['pages'] .= " OR id='" . $this->page->id . "'"; 
 		parent::init();
 	}
 
