@@ -9,6 +9,9 @@ This module serves two purposes:
 
 In either case, the profile exporter does not touch your existing site. It just creates files in a directory (/site/install/) that can then be used for a fresh installation of ProcessWire.
 
+## Please note
+
+- This module is not yet compatible with multi-language fields (LanguageSupportFields module) or multi-language page names (LanguageSupportPageNames module). If you are using those features of ProcessWire 2.2+, don't use this module until we have updated it to support that.
 
 ## How to install
 

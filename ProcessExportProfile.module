@@ -20,7 +20,7 @@ class ProcessExportProfile extends Process {
 		return array(
 			'title' => 'Export Site Profile', 
 			'summary' => 'Creates a site profile that can be used for a fresh install of ProcessWire.', 
-			'version' => 102, 
+			'version' => 103, 
 			'permanent' => false, 
 			);
 	}
@@ -135,6 +135,10 @@ class ProcessExportProfile extends Process {
 	 *
 	 */
 	protected function setup() {
+
+		if(wire('languages') && wire('modules')->isInstalled('LanguageSupportFields') || wire('modules')->isInstalled('LanguageSupportPageNames')) {
+			$this->error("The profile exporter is not yet compatible with multi-language fields or page names. You appear to have this installed, as a result, we don't recommend using the profile exporter until it is updated to support multi-language."); 
+		}
 
 		$path = $this->exportPath;
 		$url = $this->exportUrl;
