@@ -1,5 +1,7 @@
 # ProcessWire Profile Exporter
 
+Development version. Ignore everything below, I'll update this soon. 
+
 ## About this module
 
 This module serves two purposes:
