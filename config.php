@@ -44,18 +44,18 @@ $config->sessionFingerprint = true;
 /**
  * prependTemplateFile: PHP file in /site/templates/ that will be loaded before each page's template file
  *
- * Uncomment and edit to enable.
+ * Example: _init.php
  *
  */
-$config->prependTemplateFile = '_init.php';
+$config->prependTemplateFile = '';
 
 /**
  * appendTemplateFile: PHP file in /site/templates/ that will be loaded after each page's template file
  *
- * Uncomment and edit to enable.
+ * Example: _main.php
  *
-$config->appendTemplateFile = '_main.php';
  */
+$config->appendTemplateFile = '';
 
 /**
  * uploadBadExtensions: file extensions that are always disallowed from uploads
@@ -184,16 +184,6 @@ $config->dbPath = '';
  *
  */
 $config->dbLowercaseTables = true; 
-
-/**
- * Optional 'set names utf8' for sites that need it (this option is deprecated)
- *
- * This may be used instead of the $config->dbCharset = 'utf8' option, and exists here only for
- * backwards compatibility with existing installations. Otherwise, this option is deprecated.
- * 
- * $config->dbSetNamesUTF8 = true; 
- *
- */ 
 
 /**
  * Optional DB socket config for sites that need it (for most you should exclude this)
