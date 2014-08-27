@@ -442,20 +442,36 @@ class ProcessExportProfile extends Process {
 		if(!$fp) throw new WireException("Unable to open: $file"); 
 
 		while(!feof($fp)) {
-			$line = ltrim(fgets($fp)); 
+			$_line = fgets($fp); // unmodified line
+			$line = $this->cleanConfigLine($_line); // cleaned line, no comments
 			if(strpos($line, '$config->') === 0) {
 				$property = trim(substr($line, 0, strpos($line, '=')-1)); // $config->property
 				$property = trim(substr($property, strpos($property, '>')+1)); // property
 				if(in_array($property, $ignoreProperties)) continue; 
 				while(substr(rtrim($line), -1) != ';' && !feof($fp)) {
-					$line .= trim(fgets($fp)); 		
+					$line = fgets($fp); 
+					$_line .= $line; 
+					$line = $this->cleanConfigLine($line); 
 				}
-				$config[$property] = $line; 
+				$config[$property] = $_line; 
 			}
 		}
 
 		fclose($fp); 
 		return $config; 
+	}
+
+	/**
+	 * Given a config line, return a trimmed and comment-less version of the line
+	 *
+	 */
+	protected function cleanConfigLine($line) {
+		$line = trim($line); 
+		if(preg_match('{^(.+?[,;])\s*((?://|/\*).*)$}', $line, $matches)) {
+			$line = $matches[1]; 
+			//$comment = $matches[2]; 
+		}
+		return $line; 	
 	}
 
 	/**
@@ -504,11 +520,12 @@ class ProcessExportProfile extends Process {
 		$lines = array(); 
 
 		while(!feof($fp)) {
-			$line = trim(fgets($fp)); 
+			$_line = fgets($fp); 
+			$line = $this->cleanConfigLine($_line); 
 
 			if(strpos($line, '$config->') !== 0) {
 				// line that is not part of a config property (probably a comment or whitespace line)
-				$lines[] = $line;
+				$lines[] = $_line;
 				continue; 
 			}
 
@@ -517,20 +534,22 @@ class ProcessExportProfile extends Process {
 
 			while(substr(rtrim($line), -1) != ';' && !feof($fp)) {
 				// retrieve any other lines associated with this property
-				$line .= trim(fgets($fp)); 		
+				$line = fgets($fp); 
+				$_line .= $line; 
+				$line = $this->cleanConfigLine($line); 
 			}
 
 			if(in_array($property, $properties)) {
 				// this is a property where we should use the new value
-				$line = $differences[$property]; 
+				$_line = $differences[$property]; 
 			} 
 
-			$lines[] = $line; 
+			$lines[] = $_line; 
 		}
 
 		fclose($fp); 
 
-		if(!file_put_contents($file, implode("\n", $lines))) throw new WireException("Unable to write to $file"); 
+		if(!file_put_contents($file, $lines)) throw new WireException("Unable to write to $file"); 
 		$this->message(sprintf($this->_('Profile config file has been written: %s'), str_replace($this->wire('config')->paths->root, '/', $file))); 
 	}
 
@@ -611,7 +630,7 @@ class ProcessExportProfile extends Process {
 
 			$options['extraSQL'] = array(
 				"UPDATE pages SET created_users_id=$config->superUserPageID, " . 
-				"modified_users_id=$config->superuserPageID, created=NOW(), modified=NOW();", 
+				"modified_users_id=$config->superUserPageID, created=NOW(), modified=NOW();", 
 				);
 
 		}
