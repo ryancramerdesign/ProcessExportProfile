@@ -58,6 +58,13 @@ class ProcessExportProfile extends Process {
 	protected $siteConfigFile = '';
 
 	/**
+	 * Disk path to /wire/config.php
+	 *
+	 */
+	protected $wireConfigFile = '';
+
+
+	/**
 	 * Disk path to /site/modules/ProcessExportProfile/config.php
 	 *
 	 */
@@ -75,6 +82,7 @@ class ProcessExportProfile extends Process {
 		$this->exportPath = $this->config->paths->assets . $dir;
 		$this->exportURL = $this->config->urls->assets . $dir;
 		$this->siteConfigFile = dirname(rtrim($this->config->paths->templates, '/')) . "/config.php"; 
+		$this->wireConfigFile = $this->config->paths->wire . "config.php"; 
 		$this->defaultConfigFile = dirname(__FILE__) . '/config.php'; 
 
 		$this->labels['usageNotes'] = $this->_('To use this site profile, copy/extract it to the root directory of a new uninstalled copy of ProcessWire in [dir].') . ' ' . 
@@ -481,20 +489,20 @@ class ProcessExportProfile extends Process {
 	protected function findConfigDifferences() {
 
 		$siteConfig = $this->loadConfigFile($this->siteConfigFile); 
-		$defaultConfig = $this->loadConfigFile($this->defaultConfigFile); 
+		$wireConfig = $this->loadConfigFile($this->wireConfigFile); 
 		$differences = array();
 
 		foreach($siteConfig as $property => $line) {
 
-			if(!isset($defaultConfig[$property])) {
-				// property is one added by site profile and is not present in skel config
+			if(!isset($wireConfig[$property])) {
+				// property is one added by site profile and is not present in wire config
 				$differences[$property] = $line; 
 				continue; 
 			} 
 
 			// setup a comparison that ignores whitespace differences
 			$test1 = preg_replace('/\s+/s', '', $line); 
-			$test2 = preg_replace('/\s+/s', '', $defaultConfig[$property]); 
+			$test2 = preg_replace('/\s+/s', '', $wireConfig[$property]); 
 
 			if($test1 != $test2) {
 				// values are different
@@ -542,12 +550,23 @@ class ProcessExportProfile extends Process {
 			if(in_array($property, $properties)) {
 				// this is a property where we should use the new value
 				$_line = $differences[$property]; 
+				unset($differences[$property]); 
 			} 
 
 			$lines[] = $_line; 
 		}
-
 		fclose($fp); 
+
+		// populate custom properties
+		foreach($lines as $key => $line) {
+			if(strpos($line, '/*{ProcessExportProfile}*/') === false) continue; 
+			$line = '';
+			foreach($differences as $property => $_line) {
+				if(!in_array($property, $properties)) continue; 
+				$line .= $_line; 
+			}
+			$lines[$key] = $line; 
+		}
 
 		if(!file_put_contents($file, $lines)) throw new WireException("Unable to write to $file"); 
 		$this->message(sprintf($this->_('Profile config file has been written: %s'), str_replace($this->wire('config')->paths->root, '/', $file))); 
