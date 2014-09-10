@@ -13,17 +13,19 @@
 
 class ProcessExportProfile extends Process {
 
+	const minVersion = '2.4.14';
+
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Export Site Profile', 
 			'summary' => 'Create a site profile that can be used for a fresh install of ProcessWire.', 
-			'version' => 200, 
+			'version' => 201, 
 			'icon' => 'truck', 
 			'page' => array(
 				'name' => 'export-site-profile',
 				'parent' => 'setup',
 				),
-			'requires' => 'ProcessWire>=2.4.14'
+			'requires' => 'ProcessWire>=' . self::minVersion
 			);
 	}
 
@@ -707,6 +709,17 @@ class ProcessExportProfile extends Process {
 		$btn->attr('onclick', "return confirm('" . $this->_('Remove profile now?') . "')"); 
 		$btn->addClass('ui-priority-secondary'); 
 		return $btn->render();
+	}
+
+	/**
+	 * Install ProcessExportProfile
+	 *
+	 */
+	public function ___install() {
+                if(version_compare($this->wire('config')->version, self::minVersion , '<')) {
+                        throw new WireException("This module requires ProcessWire " . self::minVersion . " or newer."); 
+                }
+		parent::___install();
 	}
 
 	/**
