@@ -1,81 +1,38 @@
-# ProcessWire Profile Exporter
+# Profile Exporter for ProcessWire 2.5+
 
-Development version. Ignore everything below, I'll update this soon. 
+This module exports an installable site profile of your site. It essentially enables 
+you take any site and create files that the ProcessWire installer will recognize 
+when installing a new copy of ProcessWire. This is the tool that is used to export
+all of the ProcessWire core site profiles. 
 
-## About this module
+## About site profiles
 
-This module serves two purposes:
+Site profiles exported by this tool include the following:
 
-- To enable exporting of ProcessWire 2.0 sites to a profile that can then be imported into ProcessWire 2.1 (i.e. to upgrade to 2.1).
-- To enable exporting of ProcessWire 2.1 site profiles for sharing or distribution with others. 
+- The site database (but no caches and users)
+- Files associated with pages (/site/assets/files/)
+- Configuration file (/site/config.php), but no DB connection info
+- Template files and related assets (/site/templates/*)
+- Installed site modules (/site/modules/), except for this one
 
-In either case, the profile exporter does not touch your existing site. It just creates files in a directory (/site/install/) that can then be used for a fresh installation of ProcessWire.
+Site profiles do not include users or files not associated with pages (i.e. cache 
+files, log files, etc.). Essentially, a site profile is meant to be a version of
+a site you can share with others, that contains no confidential data like
+user or password information. 
 
-## Please note
+## How to use
 
-- This module is not yet compatible with multi-language fields (LanguageSupportFields module) or multi-language page names (LanguageSupportPageNames module). If you are using those features of ProcessWire 2.2+, don't use this module until we have updated it to support that.
+Usage instructions are provided directly in the module when using it. After 
+installing, go to Setup > Export Site Profile and it will guide you through the 
+rest. 
 
-## How to install
+## Requirements
 
-- Place the file ProcessExportProfile.module in /site/modules/
-- Login to your admin, click "Modules" at the top, and click "Check for new modules"
-- Click "install" for the Process > Export Profile module.
-- It will create a new page where you can access it under the Setup menu. 
+This version of the profile exporter requires ProcessWire 2.5 or newer. If you 
+need a profile exporter for an earlier version of ProcessWire, grab the 
+[legacy branch](https://github.com/ryancramerdesign/ProcessExportProfile/tree/legacy) of this module. 
 
+---
 
-## How to export a profile
-
-A profile consists of your site's database, files and templates. 
-
-To create a profile, Go to Setup > Export Profile. Read the instructions and click "continue."
-
-Once the profile has been created, you can copy it somewhere else or zip it up. The profile consists of files in these directories:
-
-- /site/install/  
-- /site/templates/
-
-If you intend to distribute your profile, you'll want to ZIP them up into an archive, or place them on GitHub. If using the profile to upgrade ProcessWire, then see the section following this one.
-
-Once you've saved your profile somewhere else, you should delete the files that this module saved in /site/install/ (they might be consuming a lot of disk space). You'll see a link to do this after you've finished exporting a profile.
-
-
-## Upgrading from ProcessWire 2.0 to 2.1
-
-This upgrade process is a little different from what you may have seen before. We won't actually be upgrading your current site. Instead we'll be exporting a profile of it, and using it to install a new/fresh copy of ProcessWire 2.1.
-
-To make this work, you'll have to install your copy of ProcessWire 2.1 in another location or another server. Once you've completed the installation and verified that everything is how it should be, you may then replace the original ProcessWire 2.0 site with the new one. 
-
-It should be noted that this upgrade does not cover user accounts or access control. You will have to re-create any user accounts and access settings in the new system. This was necessary because PW 2.1 uses an entirely different user system and access control than PW 2.0. Should you have a lot of user accounts that need to be converted, let me know more in the PW forums and I can guide you through how to handle your specific case.
-
-### Performing the upgrade
-
-- Export a site profile as described in the previous section. 
-
-- Download the latest copy of ProcessWire 2.1 at <http://processwire.com/download/> and install in a new location. If you are installing on the same server in a different directroy, then don't use the same database as you did in 2.0. Instead create a new database that you will be using for 2.1.
-
-- Before starting the 2.1 installer, copy these directories from your ProcessWire 2.0 installation to your ProcessWire 2.1 files (completely replacing the directories in the 2.1 files):
-    - /site/install/  ...  to ...  /site-default/install/  
-    - /site/templates/  ... to ...  /site-default/templates/
-
-- Now run the ProcessWire 2.1 installer by loading the URL to it in your browser. If all goes as it should, you'll see your 2.0 site now running 2.1. There are some likely issues that may occur, so read the following section about troubleshooting whether you think you need to or not.
-
-
-### 2.0 to 2.1 Upgrade troubleshooting
-
-#### I installed 2.1 using the new profile but now I get a 404 Not Found for every page
-
-If you run into this problem, login to ProcessWire 2.1 (/processwire/), edit the template used by your homepage, click the "access" tab and "yes". Then check the box for "guest" view access, and save. Your site should now be functional.
-
-#### I installed 2.1 using the new profile but now many pages have no title
-
-ProcessWire 2.0 assumed that all pages had a title field whether it was ever officially assigned to the template or not. ProcessWire 2.1 is different in this regard. So if you run into pages without titles, edit the templates used by those pages, add the field 'title' and hit save. The issue should now be fixed. 
-
-#### I ran out of memory or had a timeout when exporting a profile or installing the 2.1 site with the profile
-
-On a large site, it's possible that the resources dedicated to PHP might not be enough for the exporter or installer to complete it's job. Should this happen to you, we may need to do one or more parts of the process manually. So if you run into this scenario, please post in the forum and we'll get it figured out. 
-
-#### I installed 2.1 and all went well but I now have an extra random page on my Setup menu (last item)
-
-This is the page used by the Profile Exporter module on your 2.0 site. Your 2.1 site won't have the Profile Exporter installed and you can safely delete this page or drag it to the trash.
-
+Copyright 2014 by Ryan Cramer
 
