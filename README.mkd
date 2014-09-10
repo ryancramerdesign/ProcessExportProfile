@@ -1,5 +1,7 @@
 # ProcessWire Profile Exporter
 
+This is the legacy branch of the profile exporter used for ProcessWire 2.4 and earlier. For ProcessWire 2.5+, please use the [master branch](https://github.com/ryancramerdesign/ProcessExportProfile). 
+
 ## About this module
 
 This module serves two purposes:
