@@ -25,7 +25,7 @@ class ProcessExportProfile extends Process {
 				'name' => 'export-site-profile',
 				'parent' => 'setup',
 				),
-			'requires' => 'ProcessWire>=' . self::minVersion
+			'requires' => 'ProcessWire>=2.4.14'
 			);
 	}
 
