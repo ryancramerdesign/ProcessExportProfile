@@ -347,7 +347,10 @@ class ProcessExportProfile extends Process {
 			$paths->files => $path . "install/files/"
 			);
 
-		$copyOptions = array('copyEmptyDirs' => false); 
+		$copyOptions = array(
+			'copyEmptyDirs' => false,
+			'recursive' => true, 
+		); 
 
 		foreach($copies as $src => $dst) {
 			$_src = str_replace($paths->root, '/', $src); 
