@@ -19,7 +19,7 @@ class ProcessExportProfile extends Process {
 		return array(
 			'title' => 'Export Site Profile', 
 			'summary' => 'Create a site profile that can be used for a fresh install of ProcessWire.', 
-			'version' => 201, 
+			'version' => 202, 
 			'icon' => 'truck', 
 			'page' => array(
 				'name' => 'export-site-profile',
@@ -637,7 +637,10 @@ class ProcessExportProfile extends Process {
 				); 
 
 			$options['whereSQL'] = array(
-				'/^(field_.+|pages_access|pages_parents)$/' => array(
+				'/^(pages_access|pages_parents)$/' => array(
+					"pages_id NOT IN($skipPageIDs)",
+					),
+				'/^(' . implode('|', $this->getFieldTablesWithPagesID()) . ')$/' => array(
 					"pages_id NOT IN($skipPageIDs)",
 					),
 				'pages' => array(
@@ -662,6 +665,26 @@ class ProcessExportProfile extends Process {
 		$result = $backup->backup($options); 
 		foreach($backup->errors() as $error) $this->error($error); 
 		return $result; 
+	}
+
+	/**
+	 * Return an array of field_* table names that have a pages_id column
+	 * 
+	 * @return array of strings
+	 * 
+	 */
+	protected function getFieldTablesWithPagesID() {
+		$tables = array();
+		$database = $this->wire('database');
+		$db = $database->escapeTable($this->wire('config')->dbName);
+		$sql = "SELECT DISTINCT TABLE_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db' AND COLUMN_NAME IN('pages_id')";
+		$query = $database->prepare($sql);
+		$query->execute();
+		while($row = $query->fetch(PDO::FETCH_NUM)) {
+			$tables[] = $row[0];
+		}
+		$query->closeCursor();
+		return $tables;
 	}
 
 	/**
