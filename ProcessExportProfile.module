@@ -194,6 +194,14 @@ class ProcessExportProfile extends Process {
 			$form->add($f); 
 		}
 
+		$f = $this->modules->get('InputfieldTextarea'); 
+		$f->attr('name', 'profile_extra_dirs'); 
+		$f->label = $this->_('Extra Directories to Include'); 
+		$f->description = $this->_('Extra directories within "site/" to include in your export. For example: assets/scss'); 
+		$f->notes = $this->_('One directory per line.');
+		$f->attr('rows', 3); 
+		$form->add($f); 
+
 		$f = $this->modules->get('InputfieldSubmit'); 
 		$f->attr('name', 'submit_export'); 
 		$f->attr('value', $this->_('Start Export')); 
@@ -246,6 +254,8 @@ class ProcessExportProfile extends Process {
 		$summary = str_replace('"', ' ', $form->get('profile_summary')->attr('value')); 
 		$path = $this->exportPath . "$dir/";
 		$useZIP = (int) $form->get('profile_zip')->attr('value'); 
+		
+		$extra_dirs_json = json_encode( explode("\n", $form->get('profile_extra_dirs')->attr('value')) ) ;
 
 		// setup skeleton directory
 		if(!wireMkdir($path)) throw new WireException("Unable to create: $path");
@@ -296,6 +306,11 @@ class ProcessExportProfile extends Process {
 		$f->attr('value', $useZIP ? 1 : 0); 
 		$form->add($f);
 
+		$f = $this->modules->get('InputfieldHidden');
+		$f->attr('name', 'profile_extra_dirs'); 
+		$f->attr('value', $extra_dirs_json); 
+		$form->add($f);
+
 		$f = $this->modules->get('InputfieldSubmit');
 		$f->attr('name', 'submit_copy'); 
 		$f->attr('value', $this->labels['continue']); 
@@ -330,12 +345,13 @@ class ProcessExportProfile extends Process {
 	 */
 	public function ___executeCopy() {
 
-		$dir = $this->sanitizer->name($this->input->post('profile_dir')); 
+		$dir = $this->sanitizer->name($this->input->post('profile_dir'));
+		$extras = json_decode($this->input->post('profile_extra_dirs'));
 		if(!$dir) $this->session->redirect('../'); 
 
-		set_time_limit(3600); 
+		set_time_limit(3600);
 
-		if($this->input->post('profile_zip')) return $this->executeCopyZIP($dir); 
+		if($this->input->post('profile_zip')) return $this->executeCopyZIP($dir, $extras); 
 
 		$paths = $this->config->paths; 
 		$path = $this->exportPath . $dir . '/'; 
@@ -346,7 +362,13 @@ class ProcessExportProfile extends Process {
 			$paths->siteModules => $path . "modules/",
 			$paths->files => $path . "install/files/"
 			);
-
+		foreach($extras as $extra_path) {
+			$src = $paths->site . $extra_path;
+			if(file_exists($src)) {
+				$copies[$src] = $path . $extra_path;
+			}
+		}
+		
 		$copyOptions = array(
 			'copyEmptyDirs' => false,
 			'recursive' => true, 
@@ -375,7 +397,7 @@ class ProcessExportProfile extends Process {
 	 * ZIP file assets into site profile (alternative to copy)
 	 *
 	 */
-	protected function executeCopyZIP($dir) {
+	protected function executeCopyZIP($dir, $extras = NULL) {
 
 		$zipfile = $this->exportPath . "$dir.zip";
 
@@ -395,14 +417,34 @@ class ProcessExportProfile extends Process {
 		$result = wireZipFile($zipfile, $files, $options); 
 		$errors = array_merge($errors, $result['errors']); 
 		$cnt = count($result['files']); 
-		$this->message(sprintf($this->_('Added %d template and module files to ZIP'), $cnt)); 
+		$this->message(sprintf($this->_('Added %d template and module files to ZIP'), $cnt));
 
 		// file assets
 		$options = array(
 			'allowEmptyDirs' => false, 
 			'dir' => "$dir/install/",
 			); 
-		$result = wireZipFile($zipfile, $this->config->paths->files, $options); 
+		$result = wireZipFile($zipfile, $this->config->paths->files, $options);
+
+		// extra files (added by the user)
+		if($extras) {
+			foreach($extras as $extra_path) {
+				$src = $this->config->paths->site . $extra_path;
+				if(file_exists($src)) {
+					// because every file in the directory will already be prepended with the name of that directory, we have to take it
+					// off to keep it from being in the path twice.
+					$extraPathArray = explode("/", $extra_path);
+					$ripOffLastElement = array_pop($extraPathArray);
+					$_extra_path = implode("/", $extraPathArray);
+					$options = array(
+						'allowEmptyDirs' => true,
+						'dir' => "$dir/$_extra_path",
+						);
+					$result = wireZipFile($zipfile, $src, $options);
+				}
+			}
+		}
+		
 		$errors = array_merge($errors, $result['errors']); 
 		$cnt = count($result['files']); 
 		$this->message(sprintf($this->_('Added %d asset files to ZIP'), $cnt)); 
