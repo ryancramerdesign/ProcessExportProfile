@@ -19,7 +19,7 @@ class ProcessExportProfile extends Process {
 		return array(
 			'title' => 'Export Site Profile', 
 			'summary' => 'Create a site profile that can be used for a fresh install of ProcessWire.', 
-			'version' => 202, 
+			'version' => 210, 
 			'icon' => 'truck', 
 			'page' => array(
 				'name' => 'export-site-profile',
