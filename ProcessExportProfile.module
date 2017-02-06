@@ -4,8 +4,8 @@
  * Export site profiles for ProcessWire 2.5+
  *
  * ProcessWire 2.x 
- * Copyright (C) 2014 by Ryan Cramer 
- * Licensed under GNU/GPL v2, see LICENSE.TXT
+ * Copyright (C) 2017 by Ryan Cramer 
+ * Licensed under MPL 2.0
  * 
  * http://processwire.com
  *
@@ -19,7 +19,7 @@ class ProcessExportProfile extends Process {
 		return array(
 			'title' => 'Export Site Profile', 
 			'summary' => 'Create a site profile that can be used for a fresh install of ProcessWire.', 
-			'version' => 202, 
+			'version' => 300, 
 			'icon' => 'truck', 
 			'page' => array(
 				'name' => 'export-site-profile',
@@ -31,43 +31,56 @@ class ProcessExportProfile extends Process {
 
 	/**
 	 * Path that profile DB dump is exported to
+	 * 
+	 * @var string
 	 *
 	 */
 	protected $exportPath;
 
 	/**
 	 * Name of /site/ dir (not a path or URL)
+	 * 
+	 * @var string
 	 *
 	 */
 	protected $siteDir; 
 
 	/**
 	 * URL that profile DB dump is exported to
+	 * 
+	 * @var string
 	 *
 	 */
 	protected $exportURL; 
 
 	/**
 	 * Translated labels
+	 * 
+	 * @var array
 	 *
 	 */
 	protected $labels = array();
 
 	/**
 	 * Disk path to /site/config.php
+	 * 
+	 * @var string
 	 *
 	 */
 	protected $siteConfigFile = '';
 
 	/**
 	 * Disk path to /wire/config.php
+	 * 
+	 * @var string
 	 *
 	 */
 	protected $wireConfigFile = '';
 
-
 	/**
 	 * Disk path to /site/modules/ProcessExportProfile/config.php
+	 * 
+	 * @var string
 	 *
 	 */
 	protected $defaultConfigFile = '';
@@ -124,11 +137,13 @@ class ProcessExportProfile extends Process {
 	 */
 	protected function buildForm() {
 
+		/** @var InputfieldForm $form */
 		$form = $this->modules->get('InputfieldForm'); 
 
 		$info = self::getModuleInfo();			
 		$form->description = $info['summary'];
 
+		/** @var InputfieldName $f */
 		$f = $this->modules->get('InputfieldName'); 
 		$f->attr('name', 'profile_name');
 		$f->label = $this->_('Name');
@@ -138,6 +153,7 @@ class ProcessExportProfile extends Process {
 		$f->required = true; 
 		$form->add($f); 
 
+		/** @var InputfieldText $f */
 		$f = $this->modules->get('InputfieldText'); 
 		$f->attr('name', 'profile_title'); 
 		$f->label = $this->_('Title'); 
@@ -146,6 +162,7 @@ class ProcessExportProfile extends Process {
 		$f->notes = $this->_('Example: My Profile'); 
 		$form->add($f); 
 
+		/** @var InputfieldTextarea $f */
 		$f = $this->modules->get('InputfieldTextarea'); 
 		$f->attr('name', 'profile_summary'); 
 		$f->label = $this->_('Summary'); 
@@ -153,6 +170,7 @@ class ProcessExportProfile extends Process {
 		$f->attr('rows', 3); 
 		$form->add($f); 
 
+		/** @var InputfieldFile $f */
 		$f = $this->modules->get("InputfieldFile");
 		$f->name = 'screenshot';
 		$f->label = $this->_('Screenshot Image'); 
@@ -164,6 +182,7 @@ class ProcessExportProfile extends Process {
 		$f->destinationPath = $this->exportPath;
 		$form->add($f);
 
+		/** @var InputfieldRadios $f */
 		$f = $this->modules->get('InputfieldRadios');
 		$f->attr('name', 'profile_zip'); 
 		$f->label = $this->_('Profile Destination'); 
@@ -177,6 +196,7 @@ class ProcessExportProfile extends Process {
 
 		$properties = $this->findConfigDifferences();
 		if(count($properties)) {
+			/** @var InputfieldCheckboxes $f */
 			$f = $this->modules->get('InputfieldCheckboxes'); 
 			$f->attr('name', 'profile_config'); 
 			$f->icon = 'sliders'; 
@@ -194,6 +214,7 @@ class ProcessExportProfile extends Process {
 			$form->add($f); 
 		}
 
+		/** @var InputfieldSubmit $f */
 		$f = $this->modules->get('InputfieldSubmit'); 
 		$f->attr('name', 'submit_export'); 
 		$f->attr('value', $this->_('Start Export')); 
@@ -205,15 +226,34 @@ class ProcessExportProfile extends Process {
 
 	/**
 	 * Present the instructions and initial info collection form
+	 * 
+	 * @return string
 	 *
 	 */
 	public function ___execute() {
 
-		if(!$this->setup()) return; 
+		if(!$this->setup()) return '';
+		
+		$names = array(
+			'SessionHandlerDB',
+			'SystemNotifications',
+			'ImageSizerEngineIMagick',
+		);
+		foreach($names as $key => $name) {
+			if(!$this->wire('modules')->isInstalled($name)) unset($names[$key]);
+		}
+		if(count($names)) {
+			$this->warning(
+				$this->_('We recommend uninstalling the following module(s) before exporting a public/shareable profile:') . ' ' .
+				implode(', ', $names) . '. ' . 
+				$this->_('(If the profile is for personal use, it is fine to leave them installed)')
+			);
+		}
+		
 		$profileTime = $this->profileExists();
-
 		if($profileTime) {
-			$out = 	"<h2>" . $this->_('An installation profile already exists') . "</h2>" . 
+			$out = 	
+				"<h2>" . $this->_('An installation profile already exists') . "</h2>" . 
 				"<p>" . $this->_('Before continuing, please click the button below to remove it.') . "<br />" . 
 				"<span class='detail'>$this->exportURL (" . wireRelativeTimeStr($profileTime) . ")</span></p>" . 
 				$this->removeButton();
@@ -228,11 +268,16 @@ class ProcessExportProfile extends Process {
 			if($out) return $out; 
 		}
 
+
 		return $form->render() . $note;
 	}
 
 	/**
 	 * Process the initial info collection form and begin export
+	 * 
+	 * @param InputfieldForm $form
+	 * @return bool
+	 * @throws WireException
 	 *
 	 */
 	protected function processInput($form) {
@@ -253,6 +298,7 @@ class ProcessExportProfile extends Process {
 
 		// write config file
 		$f = $form->get('profile_config'); 
+		/** @var array $properties */
 		$properties = $f ? $f->attr('value') : array(); 
 		$this->writeConfigFile($path . "config.php", $properties); 
 
@@ -278,14 +324,16 @@ class ProcessExportProfile extends Process {
 		$dumpFile = $this->mysqldump("{$path}install/", false); 
 		if(!$dumpFile) {
 			$this->error("Error creating SQL dump file in {$path}install/"); 
-			$session->redirect("./"); 
+			$this->wire('session')->redirect("./"); 
 		}
 		$this->message($this->_('Database has been exported.')); 
 
 		// present screen for next step
+		/** @var InputfieldForm $form */
 		$form = $this->modules->get('InputfieldForm');
-		$form->action = './copy/';
+		$form->attr('action', './copy/');
 
+		/** @var InputfieldHidden $f */
 		$f = $this->modules->get('InputfieldHidden');
 		$f->attr('name', 'profile_dir'); 
 		$f->attr('value', $dir); 
@@ -296,13 +344,15 @@ class ProcessExportProfile extends Process {
 		$f->attr('value', $useZIP ? 1 : 0); 
 		$form->add($f);
 
+		/** @var InputfieldSubmit $f */
 		$f = $this->modules->get('InputfieldSubmit');
 		$f->attr('name', 'submit_copy'); 
 		$f->attr('value', $this->labels['continue']); 
 		$f->icon = 'angle-right';
 		$form->add($f); 
 
-		$out = 	"<h2>" . $this->_('The next step will copy/archive all of your site files.') . "</h2>" . 
+		$out = 	
+			"<h2>" . $this->_('The next step will copy/archive all of your site files.') . "</h2>" . 
 			"<p>" . $this->_('It will not make any changes to your current site. If your site has a lot of files, this could take while, so please be patient.') . "</p>" . 
 			$form->render();
 			
@@ -311,6 +361,8 @@ class ProcessExportProfile extends Process {
 
 	/**
 	 * Remove existing profile
+	 * 
+	 * @return string
 	 *
 	 */
 	public function ___executeRemove() { 
@@ -318,6 +370,7 @@ class ProcessExportProfile extends Process {
 		if(wireRmdir($this->exportPath, true)) {
 			$this->message($this->_('Removed existing profile') . " - $this->exportURL"); 
 			$this->session->redirect('../'); 
+			return '';
 		} else {
 			$this->error($this->_('Error removing existing site profile') . " - $this->exportURL"); 
 			return $this->button('../'); 
@@ -326,6 +379,8 @@ class ProcessExportProfile extends Process {
 
 	/**
 	 * Copy file assets into site profile
+	 * 
+	 * @returns string
 	 *
 	 */
 	public function ___executeCopy() {
@@ -335,7 +390,9 @@ class ProcessExportProfile extends Process {
 
 		set_time_limit(3600); 
 
-		if($this->input->post('profile_zip')) return $this->executeCopyZIP($dir); 
+		if($this->input->post('profile_zip')) {
+			return $this->executeCopyZIP($dir);
+		}
 
 		$paths = $this->config->paths; 
 		$path = $this->exportPath . $dir . '/'; 
@@ -346,7 +403,17 @@ class ProcessExportProfile extends Process {
 			$paths->siteModules => $path . "modules/",
 			$paths->files => $path . "install/files/"
 			);
-
+		
+		$optionals = array(
+			$paths->site . 'ready.php',
+			$paths->site . 'init.php',
+			$paths->site . 'finished.php',
+		);
+		
+		foreach($optionals as $file) {
+			if(is_file($file)) $copies[$file] = $path . basename($file);
+		}
+	
 		$copyOptions = array(
 			'copyEmptyDirs' => false,
 			'recursive' => true, 
@@ -355,17 +422,21 @@ class ProcessExportProfile extends Process {
 		foreach($copies as $src => $dst) {
 			$_src = str_replace($paths->root, '/', $src); 
 			$_dst = str_replace($paths->root, '/', $dst); 
-			if(wireCopy($src, $dst, $copyOptions)) $this->message("Copied $_src => $_dst", Notice::debug); 
-				else $this->error("Error copying $_src => $_dst"); 
+			if(wireCopy($src, $dst, $copyOptions)) {
+				$this->message("Copied $_src => $_dst", Notice::debug);
+			} else {
+				$this->error("Error copying $_src => $_dst");
+			}
 		}
 
 		// don't include this module in exported profile
 		wireRmdir($path . "modules/ProcessExportProfile/", true); 
 
-		$out =	"<h2>" . $this->labels['success'] . "</h2>" . 
+		$out =	
+			"<h2>" . $this->labels['success'] . "</h2>" . 
 			"<pre>$_path</pre>" . 
 			"<p>" . $this->_('Copy the entire contents of the directory above to another location using your preferred file transfer tool (FTP, SCP, rsync, etc.).') . "</p>" . 
-			"<p>" . str_replace('[dir]', "<u>$dir</u>", $this->labels['usageNotes']) . "</p>" . 
+			"<p>" . str_replace('[dir]', "<u>/$dir/</u>", $this->labels['usageNotes']) . "</p>" . 
 			$this->removeButton();
 
 		return $out; 
@@ -373,6 +444,9 @@ class ProcessExportProfile extends Process {
 
 	/**
 	 * ZIP file assets into site profile (alternative to copy)
+	 * 
+	 * @param string $dir
+	 * @return string
 	 *
 	 */
 	protected function executeCopyZIP($dir) {
@@ -412,7 +486,8 @@ class ProcessExportProfile extends Process {
 		}
 
 		if(is_file($zipfile)) {
-			$out = 	"<h2>" . $this->labels['success'] . "</h2>" . 
+			$out = 	
+				"<h2>" . $this->labels['success'] . "</h2>" . 
 				"<p><a href='../download/$dir.zip'>{$this->exportURL}$dir.zip</a></p>" . 
 				"<p>" . str_replace('[dir]', "<u>/$dir/</u>", $this->labels['usageNotes']) . "</p>"  . 
 				$this->button("../download/$dir.zip", sprintf($this->_('Download'), "$dir.zip"), 'cloud-download') . 
@@ -441,13 +516,33 @@ class ProcessExportProfile extends Process {
 
 	/**
 	 * Load the given config file return array of all values indexed by config property
+	 * 
+	 * @param string $file
+	 * @return array
+	 * @throws WireException
 	 *
 	 */
 	protected function loadConfigFile($file) {
 
 		$ignoreProperties = array(
-			'dbName', 'dbUser', 'dbPass', 'dbPath', 'dbPort', 'dbHost', 'dbSocket', 'adminEmail', 
-			'userAuthSalt', 'chmodDir', 'chmodFile', 'timezone', 'httpHosts', 'httpHost', 'uploadUnzipCommand', 
+			'dbName', 
+			'dbUser', 
+			'dbPass', 
+			'dbPath', 
+			'dbPort', 
+			'dbHost', 
+			'dbSocket', 
+			'dbEngine',
+			'dbCharset',
+			'adminEmail', 
+			'userAuthSalt', 
+			'chmodDir', 
+			'chmodFile', 
+			'timezone', 
+			'httpHosts', 
+			'httpHost', 
+			'installed', 
+			'uploadUnzipCommand', 
 			);
 
 		$config = array();
@@ -476,6 +571,9 @@ class ProcessExportProfile extends Process {
 
 	/**
 	 * Given a config line, return a trimmed and comment-less version of the line
+	 * 
+	 * @param string $line
+	 * @return string
 	 *
 	 */
 	protected function cleanConfigLine($line) {
@@ -489,6 +587,8 @@ class ProcessExportProfile extends Process {
 
 	/**
 	 * Return an array of property => value of what's unique in /site/config.php
+	 * 
+	 * @return array
 	 *
 	 */
 	protected function findConfigDifferences() {
@@ -523,6 +623,10 @@ class ProcessExportProfile extends Process {
 	 *
 	 * The $properties array contains a list of properties from /site/config.php
 	 * that should override the ones from default. 
+	 * 
+	 * @param string $file
+	 * @param array $properties
+	 * @throws WireException
 	 *
 	 */
 	protected function writeConfigFile($file, array $properties) {
@@ -592,9 +696,21 @@ class ProcessExportProfile extends Process {
 		$backup = new WireDatabaseBackup($path); 
 		$backup->setDatabase($this->database); 
 		$backup->setDatabaseConfig($config); 
-		$options = array();
+		$options = array(
+			'findReplaceCreateTable' => array()	
+		);
+
+		// the installer dynamically replaces "utf8" and "MyISAM" with user's selected
+		// charset and engine, so we make sure our DB dump references the defaults
+		if($config->dbEngine == 'InnoDB') {
+			$options['findReplaceCreateTable']['DEFAULT CHARSET=utf8mb4'] = 'DEFAULT CHARSET=utf8';
+		}
+		if($config->dbCharset == 'utf8mb4') {
+			$options['findReplaceCreateTable']['ENGINE=InnoDB'] = 'ENGINE=MyISAM';
+		}
 
 		if($fullDump) {
+			
 			$options['filename'] = 'install-full.sql';
 			
 		} else {
@@ -677,7 +793,11 @@ class ProcessExportProfile extends Process {
 		$tables = array();
 		$database = $this->wire('database');
 		$db = $database->escapeTable($this->wire('config')->dbName);
-		$sql = "SELECT DISTINCT TABLE_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db' AND COLUMN_NAME IN('pages_id')";
+		$sql = 
+			"SELECT DISTINCT TABLE_NAME " . 
+			"FROM INFORMATION_SCHEMA.COLUMNS " . 
+			"WHERE TABLE_SCHEMA='$db' " . 
+			"AND COLUMN_NAME IN('pages_id')";
 		$query = $database->prepare($sql);
 		$query->execute();
 		while($row = $query->fetch(PDO::FETCH_NUM)) {
@@ -711,6 +831,12 @@ class ProcessExportProfile extends Process {
 
 	/**
 	 * Render a button
+	 * 
+	 * @param string $href
+	 * @param string $label
+	 * @param string $icon
+	 * @param string $class
+	 * @return string
 	 *
 	 */
 	protected function button($href, $label = '', $icon = 'angle-right', $class = '') {
@@ -725,6 +851,8 @@ class ProcessExportProfile extends Process {
 
 	/**
 	 * Render a "remove" button with JS confirm dialog
+	 * 
+	 * @return string
 	 *
 	 */
 	protected function removeButton() {
@@ -732,7 +860,6 @@ class ProcessExportProfile extends Process {
 		$btn->href = $this->wire('page')->url . 'remove/'; 
 		$btn->icon = 'trash-o'; 
 		$btn->value = $this->labels['remove'];
-		$btn->attr('onclick', "return confirm('" . $this->_('Remove profile now?') . "')"); 
 		$btn->addClass('ui-priority-secondary'); 
 		return $btn->render();
 	}

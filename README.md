@@ -14,6 +14,7 @@ Site profiles exported by this tool include the following:
 - Configuration file (/site/config.php), but no DB connection info
 - Template files and related assets (/site/templates/*)
 - Installed site modules (/site/modules/), except for this one
+- System files in /site/ (ready.php, init.php, finished.php)
 
 Site profiles do not include users or files not associated with pages (i.e. cache 
 files, log files, etc.). Essentially, a site profile is meant to be a version of
@@ -34,5 +35,5 @@ need a profile exporter for an earlier version of ProcessWire, grab the
 
 ---
 
-Copyright 2014 by Ryan Cramer
+Copyright 2017 by Ryan Cramer
 

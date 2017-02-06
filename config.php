@@ -10,11 +10,11 @@
  * specify here. Simply copy any of the configuration options from that file and paste
  * them into this file in order to modify them.
  *
- * ProcessWire 2.x
- * Copyright (C) 2014 by Ryan Cramer
- * Licensed under GNU/GPL v2, see LICENSE.TXT
+ * ProcessWire 
+ * Copyright (C) 2017 by Ryan Cramer
+ * Licensed under MPL 2.0
  *
- * http://processwire.com
+ * https://processwire.com
  *
  */
 
