@@ -1,0 +1,22 @@
+{
+    "name": "ryancramerdesign/process-export-profile",
+    "type": "pw-module",
+    "description": "Enable exporting of ProcessWire 2.1 site profiles for sharing or distribution with others. ",
+    "keywords": [ "export", "import", "site", "processwire"],
+    "homepage": "http://processwire.com/",
+    "license": "GPL-2.0+",
+    "authors": [
+        {
+            "name": "Ryan Cramer",
+            "homepage": "http://processwire.com/"
+        },
+        {
+            "name": "Assets Contributors",
+            "homepage": "https://github.com/ryancramerdesign/ProcessExportProfile/contributors"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "hari/pw-module": "dev-master"
+    }
+}
