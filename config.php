@@ -1,4 +1,4 @@
-<?php
+<?php namespace ProcessWire;
 
 /**
  * ProcessWire Configuration File
@@ -11,7 +11,7 @@
  * them into this file in order to modify them.
  *
  * ProcessWire 
- * Copyright (C) 2017 by Ryan Cramer
+ * Copyright (C) 2021 by Ryan Cramer
  * Licensed under MPL 2.0
  *
  * https://processwire.com
@@ -21,6 +21,8 @@
 if(!defined("PROCESSWIRE")) die();
 
 /*** SITE CONFIG *************************************************************************/
+
+/** @var Config $config */
 
 /**
  * Enable debug mode?

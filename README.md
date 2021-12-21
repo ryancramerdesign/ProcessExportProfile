@@ -1,4 +1,4 @@
-# Profile Exporter for ProcessWire 2.5+
+# Profile Exporter for ProcessWire 3.x
 
 This module exports an installable site profile of your site. It essentially enables 
 you take any site and create files that the ProcessWire installer will recognize 
@@ -24,16 +24,10 @@ user or password information.
 ## How to use
 
 Usage instructions are provided directly in the module when using it. After 
-installing, go to Setup > Export Site Profile and it will guide you through the 
+installing, go to "Setup > Export Site Profile" and it will guide you through the 
 rest. 
-
-## Requirements
-
-This version of the profile exporter requires ProcessWire 2.5 or newer. If you 
-need a profile exporter for an earlier version of ProcessWire, grab the 
-[legacy branch](https://github.com/ryancramerdesign/ProcessExportProfile/tree/legacy) of this module. 
 
 ---
 
-Copyright 2017 by Ryan Cramer
+Copyright 2021 by Ryan Cramer
 
