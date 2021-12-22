@@ -13,19 +13,17 @@
 
 class ProcessExportProfile extends Process {
 
-	const minVersion = '3.0.0';
-
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Export Site Profile', 
 			'summary' => 'Create a site profile that can be used for a fresh install of ProcessWire.', 
-			'version' => 400, 
+			'version' => 401, 
 			'icon' => 'truck', 
 			'page' => array(
 				'name' => 'export-site-profile',
 				'parent' => 'setup',
-				),
-			'requires' => 'ProcessWire>=' . self::minVersion
+			),
+			'requires' => 'ProcessWire>=3.0.0'
 		);
 	}
 

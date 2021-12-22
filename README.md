@@ -28,6 +28,16 @@ Usage instructions are provided directly in the module when using it. After
 installing, go to "Setup > Export Site Profile" and it will guide you through the 
 rest. 
 
+### Using a custom install/finish.php file
+
+ProcessWire 3.0.191+ support a /site/install/finish.php file in the site profile
+which is a plain PHP file that has access to most site API variables and can 
+perform any finishing touches on the site. It is called after the installer finishes 
+but before it deletes installer assets and displays the final status messages to the user. 
+
+After exporting a site profile, feel free to modify the default install/finish.php 
+file to suit your needs. 
+
 ---
 
 Copyright 2021 by Ryan Cramer
