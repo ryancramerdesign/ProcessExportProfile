@@ -612,6 +612,7 @@ class ProcessExportProfile extends Process {
 		$copyOptions = array(
 			'copyEmptyDirs' => false,
 			'recursive' => true,
+			'hidden' => false
 		);
 
 		$copyPaths = array(
