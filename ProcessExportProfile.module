@@ -19,7 +19,7 @@ class ProcessExportProfile extends Process {
 		return array(
 			'title' => 'Export Site Profile', 
 			'summary' => 'Create a site profile that can be used for a fresh install of ProcessWire.', 
-			'version' => 500, 
+			'version' => 501, 
 			'icon' => 'truck', 
 			'page' => array(
 				'name' => 'export-site-profile',
@@ -607,7 +607,6 @@ class ProcessExportProfile extends Process {
 		$paths = $this->wire()->config->paths;
 	
 		// paths and files to clean in destination when update===true
-		$cleanPaths = array();
 		$cleanFiles = array();
 
 		$copyOptions = array(
@@ -623,7 +622,6 @@ class ProcessExportProfile extends Process {
 		
 		if($paths->classes && is_dir($paths->classes)) {
 			$dstPath = $path . 'classes/';
-			$cleanPaths[] = $dstPath;
 			$copyPaths[$paths->classes] = $dstPath;
 		}
 		
@@ -659,12 +657,14 @@ class ProcessExportProfile extends Process {
 		// is no longer in the live files
 		
 		if($update && is_dir($path)) {
-			foreach($cleanPaths as $dstPath) {
+			foreach($copyPaths as $dstPath) {
 				if(!is_dir($dstPath)) continue;
+				$this->warning("rmdir: $dstPath"); 
 				$files->rmdir($dstPath, true);
 			}
 			foreach($cleanFiles as $dstFile) {
 				if(!is_file($dstFile)) continue;
+				$this->warning("unlink: $dstFile"); 
 				$files->unlink($dstFile);
 			}
 		}
