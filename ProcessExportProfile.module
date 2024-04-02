@@ -1069,7 +1069,6 @@ class ProcessExportProfile extends Process {
 			// create, but no data
 			$options['excludeExportTables'] = array(
 				'field_roles',
-				'field_permissions',
 				'field_email',
 				'field_pass',
 				'caches',
