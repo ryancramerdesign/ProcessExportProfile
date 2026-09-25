@@ -4,7 +4,7 @@
  * Export site profiles for ProcessWire 3.x
  *
  * ProcessWire 3.x 
- * Copyright (C) 2024 by Ryan Cramer 
+ * Copyright (C) 2026 by Ryan Cramer
  * Licensed under MPL 2.0
  * 
  * https://processwire.com
@@ -19,7 +19,7 @@ class ProcessExportProfile extends Process {
 		return array(
 			'title' => 'Export Site Profile', 
 			'summary' => 'Create a site profile that can be used for a fresh install of ProcessWire.', 
-			'version' => 501, 
+			'version' => 502,
 			'icon' => 'truck', 
 			'page' => array(
 				'name' => 'export-site-profile',
@@ -241,6 +241,18 @@ class ProcessExportProfile extends Process {
 			$form->add($f); 
 		}
 
+		/** @var InputfieldCheckboxes $f */
+		$f = $modules->get('InputfieldCheckboxes');
+		$f->attr('name', 'profile_extras');
+		$f->label = $this->_('Users, Roles, Permissions');
+		$f->collapsed = Inputfield::collapsedBlank;
+		$f->icon = 'key';
+		$f->description = $this->_('Typically you would only include these items if the profile is for your own use and not for sharing.');
+		$f->addOption('permissions', $this->_('Export Permissions'));
+		$f->addOption('roles', $this->_('Export Roles'));
+		$f->addOption('users', $this->_('Export Users, Passwords, Roles, Permissions'));
+		$form->add($f);
+
 		/** @var InputfieldSubmit $f */
 		$f = $modules->get('InputfieldSubmit'); 
 		$f->attr('name', 'submit_export'); 
@@ -438,6 +450,7 @@ class ProcessExportProfile extends Process {
 		$title = $form->getChildByName('profile_title')->val();
 		$summary = $form->getChildByName('profile_summary')->val();
 		$useZIP = (int) $form->getChildByName('profile_zip')->val();
+		$extras = $form->getChildByName('profile_extras')->val();
 		$path = $this->exportPath . "$dir/";
 
 		// setup skeleton directory
@@ -454,7 +467,7 @@ class ProcessExportProfile extends Process {
 		
 		/** @var array $properties */
 		$properties = $f ? $f->attr('value') : array(); 
-		$this->writeConfigFile($path . 'config.php', $properties); 
+		$this->writeConfigFile($path . 'config.php', $properties, $extras);
 
 		// save screenshot
 		$screenshot = '';
@@ -464,10 +477,11 @@ class ProcessExportProfile extends Process {
 			}
 		}
 
+		$files->filePutContents($this->getExtrasFile($dir), json_encode($extras));
 		$this->writeInfoFile($path, $title, $summary, $screenshot); 
 
 		// export database
-		$dumpFile = $this->mysqldump("{$path}install/"); 
+		$dumpFile = $this->mysqldump("{$path}install/", false, $extras);
 		
 		if($dumpFile) {
 			$this->message(sprintf($this->_('Exported database to: %s'), $this->pathLabel($dumpFile))); 
@@ -556,11 +570,12 @@ class ProcessExportProfile extends Process {
 		
 		$path = $this->exportPath . "$profileInfo[name]/";
 		$installPath = $path . "install/";
-		
+		$extras = $this->getExtras($profileInfo['name']);
+
 		// export database
 		$sqlFile = $installPath . 'install.sql';
 		if(is_file($sqlFile)) unlink($sqlFile);
-		$sqlFile = $this->mysqldump("{$path}install/");
+		$sqlFile = $this->mysqldump("{$path}install/", false, $extras);
 
 		if(!$sqlFile) {
 			$this->error("Error creating SQL dump file in $installPath");
@@ -569,7 +584,7 @@ class ProcessExportProfile extends Process {
 
 		$this->message($this->_('Updated database export file'));
 		
-		$out = $this->processCopy($profileInfo['name']);
+		$out = $this->processCopy($profileInfo['name'], $extras);
 		
 		$this->message($this->_('Updated existing site profile')); 
 		
@@ -598,11 +613,12 @@ class ProcessExportProfile extends Process {
 	 * 
 	 * @param string $path Profile path to copy into
 	 * @param bool $update 
+	 * @param array $extras
 	 * @throws WireException
 	 * 
 	 */
-	public function copyFileAssets($path, $update = false) {
-	
+	public function copyFileAssets($path, $update = false, $extras = []) {
+
 		$files = $this->wire()->files;
 		$paths = $this->wire()->config->paths;
 	
@@ -620,7 +636,7 @@ class ProcessExportProfile extends Process {
 			$paths->siteModules => $path . 'modules/',
 			$paths->files => $path . 'install/files/'
 		);
-		
+
 		if($paths->classes && is_dir($paths->classes)) {
 			$dstPath = $path . 'classes/';
 			$copyPaths[$paths->classes] = $dstPath;
@@ -660,12 +676,10 @@ class ProcessExportProfile extends Process {
 		if($update && is_dir($path)) {
 			foreach($copyPaths as $dstPath) {
 				if(!is_dir($dstPath)) continue;
-				$this->warning("rmdir: $dstPath"); 
 				$files->rmdir($dstPath, true);
 			}
 			foreach($cleanFiles as $dstFile) {
 				if(!is_file($dstFile)) continue;
-				$this->warning("unlink: $dstFile"); 
 				$files->unlink($dstFile);
 			}
 		}
@@ -682,16 +696,26 @@ class ProcessExportProfile extends Process {
 
 		// don't include this module in exported profile
 		$files->rmdir($path . 'modules/ProcessExportProfile/', true);
+
+		if(!in_array('users', $extras)) {
+			foreach($this->wire()->users as $u) {
+				$userDir = $path . "install/files/$u->id/";
+				if(is_dir($userDir)) {
+					$files->rmdir($userDir, true);
+				}
+			}
+		}
 	}
 
 	/**
 	 * Copy file assets into site profile
 	 * 
 	 * @param string $dir Profile directory name if updating existing profile
+	 * @param array $extras
 	 * @returns string
 	 *
 	 */
-	public function processCopy($dir = '') {
+	public function processCopy($dir = '', $extras = []) {
 	
 		$sanitizer = $this->wire()->sanitizer;
 		$input = $this->wire()->input;
@@ -704,17 +728,18 @@ class ProcessExportProfile extends Process {
 			if(empty($dir)) {
 				$this->error('No profile name specified');
 				$this->wire()->session->location('./');
-			} else if($input->post('profile_zip')) {
-				return $this->processCopyZIP($dir);
 			}
 		} else {
 			$update = true;
 		}
+
+		if(empty($extras)) $extras = $this->getExtras($dir);
+		if($input->post('profile_zip')) return $this->processCopyZIP($dir, $extras);
 	
 		$path = $this->exportPath . $dir . '/';
 		$pathLabel = $sanitizer->entities($this->pathLabel($path)); // relative to root
 
-		$this->copyFileAssets($path, $update);
+		$this->copyFileAssets($path, $update, $extras);
 
 		$this->headline($update ? $this->labels['updateSuccess'] : $this->labels['exportSuccess']); 
 
@@ -733,10 +758,11 @@ class ProcessExportProfile extends Process {
 	 * ZIP file assets into site profile (alternative to copy)
 	 * 
 	 * @param string $dir
+	 * @param array $extras
 	 * @return string
 	 *
 	 */
-	protected function processCopyZIP($dir) {
+	protected function processCopyZIP($dir, array $extras = array()) {
 		
 		$config = $this->wire()->config;
 		$zipfile = $this->exportPath . "$dir.zip";
@@ -785,7 +811,14 @@ class ProcessExportProfile extends Process {
 		$options = array(
 			'allowEmptyDirs' => false, 
 			'dir' => "$dir/install/",
+			'exclude' => array(),
 		); 
+
+		if(!in_array('users', $extras)) {
+			foreach($this->wire()->users as $u) {
+				$options['exclude'][] = "$dir/install/files/$u->id";
+			}
+		}
 		
 		$result = wireZipFile($zipfile, $config->paths->files, $options); 
 		$errors = array_merge($errors, $result['errors']); 
@@ -797,7 +830,7 @@ class ProcessExportProfile extends Process {
 		}
 
 		if(is_file($zipfile)) {
-			$this->headline($this->labels['success']); 
+			$this->headline($this->labels['exportSuccess']);
 			$out = 	
 				"<p><a href='./download/$dir.zip'>$this->exportURL$dir.zip</a></p>" . 
 				"<p>" . str_replace('[dir]', "<u>/$dir/</u>", $this->labels['usageNotes']) . "</p>"  . 
@@ -831,11 +864,12 @@ class ProcessExportProfile extends Process {
 	 * Load the given config file return array of all values indexed by config property
 	 * 
 	 * @param string $file
+	 * @param array $extras
 	 * @return array
 	 * @throws WireException
 	 *
 	 */
-	protected function loadConfigFile($file) {
+	protected function loadConfigFile($file, array $extras = []) {
 
 		$ignoreProperties = array(
 			'dbName', 
@@ -849,7 +883,6 @@ class ProcessExportProfile extends Process {
 			'dbCharset',
 			'dbReader',
 			'adminEmail', 
-			'userAuthSalt', 
 			'chmodDir', 
 			'chmodFile', 
 			'timezone', 
@@ -861,6 +894,10 @@ class ProcessExportProfile extends Process {
 			'uploadUnzipCommand', 
 			'wireMail',
 		);
+
+		if(!in_array('users', $extras)) {
+			$ignoreProperties[] = 'userAuthSalt';
+		}
 
 		$config = array();
 		$fp = fopen($file, "r"); 
@@ -906,13 +943,14 @@ class ProcessExportProfile extends Process {
 	/**
 	 * Return an array of property => value of what's unique in /site/config.php
 	 * 
+	 * @param array $extras
 	 * @return array
 	 *
 	 */
-	protected function findConfigDifferences() {
+	protected function findConfigDifferences(array $extras = array()) {
 
-		$siteConfig = $this->loadConfigFile($this->siteConfigFile); 
-		$wireConfig = $this->loadConfigFile($this->wireConfigFile); 
+		$siteConfig = $this->loadConfigFile($this->siteConfigFile, $extras);
+		$wireConfig = $this->loadConfigFile($this->wireConfigFile, $extras);
 		$differences = array();
 
 		foreach($siteConfig as $property => $line) {
@@ -944,12 +982,15 @@ class ProcessExportProfile extends Process {
 	 * 
 	 * @param string $file
 	 * @param array $properties
+	 * @param array $extras
 	 * @throws WireException
 	 *
 	 */
-	protected function writeConfigFile($file, array $properties) {
+	protected function writeConfigFile($file, array $properties, array $extras = array()) {
 
-		$differences = $this->findConfigDifferences();
+		if(in_array('users', $extras)) $properties[] = 'userAuthSalt';
+
+		$differences = $this->findConfigDifferences($extras);
 		$fp = fopen($this->defaultConfigFile, "r"); 
 		if(!$fp) throw new WireException("Unable to open $this->defaultConfigFile for reading"); 
 		$lines = array(); 
@@ -1011,10 +1052,11 @@ class ProcessExportProfile extends Process {
 	 *
 	 * @param string $path Path where dump file should be created
 	 * @param bool $fullDump Perform a full dump of everything (default: false)
+	 * @param array $extras Extras to include that would usually be excluded: permissions, roles, users
 	 * @return string|bool Returns the created file on success or false on error
 	 *
 	 */
-	public function mysqldump($path, $fullDump = false) {
+	public function mysqldump($path, $fullDump = false, $extras = []) {
 
 		$config = $this->wire()->config;
 		$backup = new WireDatabaseBackup($path); 
@@ -1023,6 +1065,13 @@ class ProcessExportProfile extends Process {
 		$options = array(
 			'findReplaceCreateTable' => array()	
 		);
+
+		// roles and permissions are required if exporting users
+		if(in_array('users', $extras)) {
+			$extras[] = 'roles';
+			$extras[] = 'permissions';
+		}
+		$extras = array_unique($extras);
 
 		// the installer dynamically replaces "utf8" and "MyISAM" with user's selected
 		// charset and engine, so we make sure our DB dump references the defaults
@@ -1035,7 +1084,7 @@ class ProcessExportProfile extends Process {
 		}
 
 		if($fullDump) {
-			
+
 			$options['filename'] = 'install-full.sql';
 			
 		} else {
@@ -1044,11 +1093,14 @@ class ProcessExportProfile extends Process {
 			$skipPageIDs = array($this->wire()->page->id);
 
 			// exclude users
-			foreach($this->wire()->pages->find("template=user, include=all") as $u) {
-				if(in_array($u->id, array($config->guestUserPageID, $config->superUserPageID))) continue; 
-				$skipPageIDs[] = $u->id; 
+			if(!in_array('users', $extras)) {
+				foreach($this->wire()->pages->find("template=user, include=all") as $u) {
+					if(in_array($u->id, array($config->guestUserPageID, $config->superUserPageID))) continue;
+					$skipPageIDs[] = $u->id;
+				}
 			}
-			$skipPageIDs = implode(',', $skipPageIDs); 
+
+			$skipPageIDs = implode(',', $skipPageIDs);
 
 			$options['filename'] = 'install.sql';
 
@@ -1067,15 +1119,24 @@ class ProcessExportProfile extends Process {
 			);
 
 			// create, but no data
-			$options['excludeExportTables'] = array(
-				'field_roles',
-				'field_permissions',
-				'field_email',
-				'field_pass',
+			$exclude = [
 				'caches',
 				'session_login_throttle',
 				'page_path_history', 
-			); 
+			];
+
+			if(!in_array('permissions', $extras)) {
+				$exclude[] = 'field_permissions';
+			}
+			if(!in_array('roles', $extras)) {
+				$exclude[] = 'field_roles';
+			}
+			if(!in_array('users', $extras)) {
+				$exclude[] = 'field_email';
+				$exclude[] = 'field_pass';
+			}
+
+			$options['excludeExportTables'] = $exclude;
 
 			$options['whereSQL'] = array(
 				'/^(pages_access|pages_parents)$/' => array(
@@ -1096,10 +1157,12 @@ class ProcessExportProfile extends Process {
 				),
 			);
 
-			$options['extraSQL'] = array(
-				"UPDATE pages SET created_users_id=$config->superUserPageID, " . 
-				"modified_users_id=$config->superUserPageID, created=NOW(), modified=NOW();", 
-			);
+			if(!in_array('users', $extras)) {
+				$options['extraSQL'] = array(
+					"UPDATE pages SET created_users_id=$config->superUserPageID, " .
+					"modified_users_id=$config->superUserPageID, created=NOW(), modified=NOW();",
+				);
+			}
 
 		}
 
@@ -1110,26 +1173,17 @@ class ProcessExportProfile extends Process {
 	}
 
 	/**
-	 * Return an array of field_* table names that have a pages_id column
-	 * 
+	 * Return an array of table names that have a pages_id column
+	 *
 	 * @return array of strings
-	 * 
+	 *
 	 */
 	protected function getFieldTablesWithPagesID() {
 		$tables = array();
 		$database = $this->wire()->database;
-		$db = $database->escapeTable($this->wire()->config->dbName);
-		$sql = 
-			"SELECT DISTINCT TABLE_NAME " . 
-			"FROM INFORMATION_SCHEMA.COLUMNS " . 
-			"WHERE TABLE_SCHEMA='$db' " . 
-			"AND COLUMN_NAME IN('pages_id')";
-		$query = $database->prepare($sql);
-		$query->execute();
-		while($row = $query->fetch(\PDO::FETCH_NUM)) {
-			$tables[] = $row[0];
+		foreach($database->getTables() as $table) {
+			if($database->columnExists($table, 'pages_id')) $tables[] = $table;
 		}
-		$query->closeCursor();
 		return $tables;
 	}
 
@@ -1154,13 +1208,33 @@ class ProcessExportProfile extends Process {
 				break;
 			}
 		}
-	
+
 		if($name) return array(
 			'name' => $this->wire()->sanitizer->name($name),
 			'time' => $time,
 		);
 		
 		return false;
+	}
+
+	/**
+	 * Get extras
+	 *
+	 * @param $profileName
+	 * @return array
+	 *
+	 */
+	protected function getExtras($profileName) {
+		$file = $this->getExtrasFile($profileName);
+		$extras = [];
+		if(is_file($file)) $extras = json_decode(file_get_contents($file), true);
+		if(!is_array($extras)) $extras = [];
+		return $extras;
+	}
+
+	protected function getExtrasFile($profileName) {
+		if(strpos($profileName, 'site-') !== 0) $profileName = "site-$profileName";
+		return $this->exportPath . $profileName . '/install/extras.json';
 	}
 
 	/**
